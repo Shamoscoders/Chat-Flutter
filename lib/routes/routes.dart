@@ -12,11 +12,18 @@ class Routes {
       case LoginScreen.routeName:
         return MaterialPageRoute(builder: (ctx) => LoginScreen());
       case UsersScreen.routeName:
-        return MaterialPageRoute(builder: (ctx) => UsersScreen(currentUserId: argument['userId']));
+        return MaterialPageRoute(
+            builder: (ctx) => UsersScreen(currentUserId: argument['userId']));
       case ChatsScreen.routeName:
-        return MaterialPageRoute(builder: (ctx) => ChatsScreen(id: argument['id'], avatar: argument['avatar'],));
+        return MaterialPageRoute(
+            builder: (ctx) => ChatsScreen(
+                  id: argument['id'],
+                  name: argument['name'],
+                  avatar: argument['avatar'],
+                ));
       case FullImageScreen.routeName:
-        return MaterialPageRoute(builder: (ctx) => FullImageScreen(url: argument['url']));
+        return MaterialPageRoute(
+            builder: (ctx) => FullImageScreen(url: argument['url']));
       default:
         return MaterialPageRoute(
           builder: (ctx) => Scaffold(
