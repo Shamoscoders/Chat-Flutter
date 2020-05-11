@@ -1,33 +1,36 @@
 import 'dart:io';
 
-import 'package:ChatFlutter/constant/data.dart';
+import 'package:ChatFlutter/blocs/chat_bloc.dart';
 import 'package:ChatFlutter/constant/style.dart';
-import 'package:ChatFlutter/fullphoto.dart';
+import 'package:ChatFlutter/data/user.dart';
+import 'package:ChatFlutter/widgets/full_image_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-class Chats extends StatefulWidget {
-  final String peerId;
-  final String peerAvatar;
+class ChatsScreen extends StatefulWidget {
+  static const routeName = 'chat';
+  static argument({@required String id, @required String avatar}) =>
+      {'id': id, 'avatar': avatar};
 
-  Chats({Key key, @required this.peerId, @required this.peerAvatar});
+  final String id;
+  final String avatar;
+
+  ChatsScreen({Key key, @required this.id, @required this.avatar});
 
   @override
-  _ChatsState createState() => _ChatsState();
+  _ChatsScreenState createState() => _ChatsScreenState();
 }
 
-class _ChatsState extends State<Chats> {
-  String groupChatId;
-  String id;
-  SharedPreferences prefs;
+class _ChatsScreenState extends State<ChatsScreen> {
+  String _userId;
   List<DocumentSnapshot> listMessages = [];
+
+  ChatBloc _chatBloc;
 
   File imageFile;
   bool isLoading;
@@ -41,26 +44,12 @@ class _ChatsState extends State<Chats> {
 
   @override
   void initState() {
+    _chatBloc = ChatBloc(id: widget.id);
     super.initState();
-    groupChatId = '';
+    User.getId().then((value) => _userId = value);
     isLoading = false;
     isShowSticker = false;
     imageUrl = '';
-    readLocal();
-  }
-
-  readLocal() async {
-    prefs = await SharedPreferences.getInstance();
-    id = prefs.getString('id') ?? '';
-    if (id.hashCode <= widget.peerId.hashCode) {
-      setState(() => groupChatId = '$id-${widget.peerId}');
-    } else {
-      setState(() => groupChatId = '${widget.peerId}-$id');
-    }
-    Firestore.instance
-        .collection('users')
-        .document(id)
-        .updateData({'chattingWith': widget.peerId});
   }
 
   @override
@@ -99,41 +88,35 @@ class _ChatsState extends State<Chats> {
   }
 
   Widget _buildListMessage() {
-    print("Chatd Id : ${groupChatId == ''}");
-    return Flexible(
-      child: groupChatId == ''
-          ? Center(
-              child: Container(
-                child: Text('test'),
-              ),
-            )
-          : StreamBuilder<QuerySnapshot>(
-              stream: Firestore.instance
-                  .collection(CHAT_COLLECTIONS)
-                  .document(groupChatId)
-                  .collection(groupChatId)
-                  .orderBy('timestamp', descending: true)
-                  .limit(20)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                print('State : ${snapshot.hasData}');
-                if (snapshot.hasData) {
-                  listMessages = snapshot.data.documents;
-                  print(
-                      'Data : ${listMessages.length} - ${snapshot.data.documents.length}');
-                  return ListView.builder(
-                      padding: EdgeInsets.all(10.0),
-                      itemCount: listMessages.length,
-                      reverse: true,
-                      controller: listScrollController,
-                      itemBuilder: (context, index) =>
-                          _buildItem(index, listMessages[index]));
-                } else {
-                  return _buildProgressIndicator();
-                }
-              },
-            ),
-    );
+    return StreamBuilder<String>(
+        stream: _chatBloc.groupChatStream,
+        builder: (context, snapshot) {
+          return Flexible(
+            child: (!snapshot.hasData && snapshot.data == '')
+                ? Center(
+                    child: Container(
+                      child: Text('Empty'),
+                    ),
+                  )
+                : StreamBuilder<QuerySnapshot>(
+                    stream: _chatBloc.chatsStream(snapshot.data),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        listMessages = snapshot.data.documents;
+                        return ListView.builder(
+                            padding: EdgeInsets.all(10.0),
+                            itemCount: listMessages.length,
+                            reverse: true,
+                            controller: listScrollController,
+                            itemBuilder: (context, index) =>
+                                _buildItem(index, listMessages[index]));
+                      } else {
+                        return _buildProgressIndicator();
+                      }
+                    },
+                  ),
+          );
+        });
   }
 
   Widget _buildInput() {
@@ -221,44 +204,23 @@ class _ChatsState extends State<Chats> {
     setState(() => isShowSticker = !isShowSticker);
   }
 
-  Future uploadFile() async {
-    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-    StorageReference reference = FirebaseStorage.instance.ref().child(fileName);
-    StorageUploadTask uploadTask = reference.putFile(imageFile);
-    StorageTaskSnapshot storageTaskSnapshot = await uploadTask.onComplete;
-    storageTaskSnapshot.ref.getDownloadURL().then((downloadUrl) {
-      setState(() {
-        imageUrl = downloadUrl;
-        _onSendMessage(imageUrl, 1);
-      });
-    }).catchError((err) {
-      Fluttertoast.showToast(msg: 'Error : $err');
-    }).whenComplete(() => setState(() => isLoading = false));
+  void uploadFile() {
+    _chatBloc
+        .uploadImage(file: imageFile)
+        .then((value) {})
+        .catchError((err) => Fluttertoast.showToast(msg: 'Error : $err'))
+        .whenComplete(() => setState(() => isLoading = false));
   }
 
   void _onSendMessage(String content, int type) {
     // type: 0 = text, 1 = image, 2 = sticker
     if (content.trim() != '') {
       textEditingController.clear();
-
-      var documentReference = Firestore.instance
-          .collection(CHAT_COLLECTIONS)
-          .document(groupChatId)
-          .collection(groupChatId)
-          .document(DateTime.now().millisecondsSinceEpoch.toString());
-
-      Firestore.instance.runTransaction((transaction) async {
-        await transaction.set(
-          documentReference,
-          {
-            'idFrom': id,
-            'idTo': widget.peerId,
-            'timestamp': DateTime.now().millisecondsSinceEpoch.toString(),
-            'content': content,
-            'type': type
-          },
-        );
-      });
+      try {
+        _chatBloc.sendMessage(content: content, type: type);
+      } catch (err) {
+        Fluttertoast.showToast(msg: err.toString());
+      }
       listScrollController.animateTo(0.0,
           duration: Duration(milliseconds: 300), curve: Curves.easeOut);
     } else {
@@ -267,7 +229,7 @@ class _ChatsState extends State<Chats> {
   }
 
   Widget _buildItem(int index, DocumentSnapshot document) {
-    if (document['idFrom'] == id) {
+    if (document['idFrom'] == _userId) {
       return _buildMyMessage(index, document);
     } else {
       return _buildFriendsMessage(index, document);
@@ -334,13 +296,9 @@ class _ChatsState extends State<Chats> {
                         borderRadius: BorderRadius.all(Radius.circular(8.0)),
                         clipBehavior: Clip.hardEdge,
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    FullPhoto(url: document['content'])));
-                      },
+                      onPressed: () => Navigator.pushNamed(
+                          context, FullImageScreen.routeName,
+                          arguments: {'url': document['content']}),
                       padding: EdgeInsets.all(0),
                     ),
                     margin: EdgeInsets.only(
@@ -383,7 +341,7 @@ class _ChatsState extends State<Chats> {
                           height: 35.0,
                           padding: EdgeInsets.all(10.0),
                         ),
-                        imageUrl: widget.peerAvatar,
+                        imageUrl: widget.avatar,
                         width: 35.0,
                         height: 35.0,
                         fit: BoxFit.cover,
@@ -448,13 +406,9 @@ class _ChatsState extends State<Chats> {
                                   BorderRadius.all(Radius.circular(8.0)),
                               clipBehavior: Clip.hardEdge,
                             ),
-                            onPressed: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          FullPhoto(url: document['content'])));
-                            },
+                            onPressed: () => Navigator.pushNamed(
+                                context, FullImageScreen.routeName,
+                                arguments: {'url': document['content']}),
                             padding: EdgeInsets.all(0),
                           ),
                           margin: EdgeInsets.only(left: 10.0),
@@ -498,7 +452,7 @@ class _ChatsState extends State<Chats> {
   bool isLastMessageRight(int index) {
     if ((index > 0 &&
             listMessages != null &&
-            listMessages[index - 1]['idFrom'] != id) ||
+            listMessages[index - 1]['idFrom'] != _userId) ||
         index == 0) {
       return true;
     } else {
@@ -509,7 +463,7 @@ class _ChatsState extends State<Chats> {
   bool isLastMessageLeft(int index) {
     if ((index > 0 &&
             listMessages != null &&
-            listMessages[index - 1]['idFrom'] == id) ||
+            listMessages[index - 1]['idFrom'] == _userId) ||
         index == 0) {
       return true;
     } else {

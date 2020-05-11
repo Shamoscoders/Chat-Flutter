@@ -1,4 +1,4 @@
-import 'package:ChatFlutter/chats.dart';
+import 'package:ChatFlutter/blocs/users_bloc.dart';
 import 'package:ChatFlutter/constant/style.dart';
 import 'package:ChatFlutter/models/choice.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,7 +6,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
+import 'chats_screen.dart';
+
 class UsersScreen extends StatefulWidget {
+  static const routeName = 'users';
+  static arguments({@required String id}) => {'userId': id};
+
   final String currentUserId;
 
   UsersScreen({@required this.currentUserId});
@@ -20,7 +25,15 @@ class UsersScreenState extends State<UsersScreen> {
   bool isLoading = false;
   final String currentUserId;
 
+  UsersBloc _usersBloc;
+
   UsersScreenState({@required this.currentUserId});
+
+  @override
+  void initState() {
+    _usersBloc = UsersBloc();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +47,7 @@ class UsersScreenState extends State<UsersScreen> {
               // List
               Container(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: Firestore.instance.collection('users').snapshots(),
+                  stream: _usersBloc.usersStream,
                   builder: (context, snapshot) {
                     print(
                         "Result : ${snapshot.hasData} - ${snapshot.data.documents.length}");
@@ -172,15 +185,9 @@ class UsersScreenState extends State<UsersScreen> {
               ),
             ],
           ),
-          onPressed: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => Chats(
-                          peerId: document.documentID,
-                          peerAvatar: document['photoUrl'],
-                        )));
-          },
+          onPressed: () => Navigator.pushNamed(context, ChatsScreen.routeName,
+              arguments: ChatsScreen.argument(
+                  id: document.documentID, avatar: document['photoUrl'])),
           color: greyColor2,
           padding: EdgeInsets.fromLTRB(25.0, 10.0, 25.0, 10.0),
           shape:
@@ -194,5 +201,4 @@ class UsersScreenState extends State<UsersScreen> {
   Future<bool> onBackPress() {
     return Future<bool>.value(true);
   }
-
 }
