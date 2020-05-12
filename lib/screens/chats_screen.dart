@@ -6,6 +6,7 @@ import 'package:ChatFlutter/data/user.dart';
 import 'package:ChatFlutter/utils/time_format.dart';
 import 'package:ChatFlutter/widgets/chat_image.dart';
 import 'package:ChatFlutter/widgets/full_image_screen.dart';
+import 'package:ChatFlutter/widgets/profile_image.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -105,26 +106,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
               color: Colors.white,
             ),
           ),
-          Material(
-            child: CachedNetworkImage(
-              placeholder: (context, url) => Container(
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.0,
-                  valueColor: AlwaysStoppedAnimation<Color>(themeColor),
-                ),
-                width: 35.0,
-                height: 35.0,
-                padding: EdgeInsets.all(10.0),
-              ),
-              imageUrl: widget.avatar,
-              width: 35.0,
-              height: 35.0,
-              fit: BoxFit.cover,
-            ),
-            borderRadius: BorderRadius.all(
-              Radius.circular(18.0),
-            ),
-            clipBehavior: Clip.hardEdge,
+          ProfileImage(
+            imageUrl: widget.avatar,
           ),
           SizedBox(
             width: 20,
@@ -213,14 +196,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 1.0),
               child: IconButton(
-                icon: Icon(Icons.image, color: greyColor,),
+                icon: Icon(
+                  Icons.image,
+                  color: greyColor,
+                ),
                 onPressed: () => pickImage(),
                 color: primaryColor,
               ),
             ),
             color: Colors.white,
           ),
-          
+
           // Edit text
           Flexible(
             child: Container(
@@ -326,18 +312,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
                           bottomLeft: Radius.circular(7.0),
                           bottomRight: Radius.circular(7.0),
                         )),
-                    margin: EdgeInsets.only(
-                        bottom: 10.0,
-                        right: 10.0),
+                    margin: EdgeInsets.only(bottom: 10.0, right: 10.0),
                   )
                 : Container(
                     child: ChatImage(
                       context: context,
                       imageUrl: document['content'],
                     ),
-                    margin: EdgeInsets.only(
-                        bottom: 10.0,
-                        right: 10.0),
+                    margin: EdgeInsets.only(bottom: 10.0, right: 10.0),
                   ),
           ],
           mainAxisAlignment: MainAxisAlignment.end,

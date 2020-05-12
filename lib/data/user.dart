@@ -38,4 +38,10 @@ class User {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString(ABOUT);
   }
+
+  static Future<void> clear() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.clear();
+  }
+
 }

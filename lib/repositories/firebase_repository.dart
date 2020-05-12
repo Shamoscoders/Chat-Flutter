@@ -21,6 +21,7 @@ class FirebaseRepository {
       await FirebaseAuth.instance.signOut();
       await _googleSignIn.disconnect();
       await _googleSignIn.signOut();
+      await User.clear();
     } on PlatformException catch (err) {
       print('Error Platform : $err');
       throw err;

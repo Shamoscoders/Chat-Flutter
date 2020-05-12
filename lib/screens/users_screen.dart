@@ -4,6 +4,7 @@ import 'package:ChatFlutter/data/user.dart';
 import 'package:ChatFlutter/models/choice.dart';
 import 'package:ChatFlutter/screens/login_screen.dart';
 import 'package:ChatFlutter/utils/dialog.dart';
+import 'package:ChatFlutter/widgets/profile_image.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -41,8 +42,7 @@ class UsersScreenState extends State<UsersScreen> {
   void initState() {
     _usersBloc = UsersBloc();
     super.initState();
-    _progressDialog =
-        DialogUtil.progressDialog(context: context);
+    _progressDialog = DialogUtil.progressDialog(context: context);
   }
 
   @override
@@ -89,27 +89,9 @@ class UsersScreenState extends State<UsersScreen> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        Material(
-                          child: CachedNetworkImage(
-                            placeholder: (context, url) => Container(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.0,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(themeColor),
-                              ),
-                              width: 50.0,
-                              height: 50.0,
-                              padding: EdgeInsets.all(10.0),
-                            ),
-                            imageUrl: snapshot.data,
-                            width: 50.0,
-                            height: 50.0,
-                            fit: BoxFit.cover,
-                          ),
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(25.0),
-                          ),
-                          clipBehavior: Clip.hardEdge,
+                        ProfileImage(
+                          imageUrl: snapshot.data,
+                          imageSize: 50.0,
                         ),
                         SizedBox(
                           width: 20,
