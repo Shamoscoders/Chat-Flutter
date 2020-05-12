@@ -1,27 +1,21 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:ChatFlutter/blocs/chat_bloc.dart';
 import 'package:ChatFlutter/constant/style.dart';
 import 'package:ChatFlutter/data/user.dart';
+import 'package:ChatFlutter/models/message.dart';
 import 'package:ChatFlutter/utils/time_format.dart';
 import 'package:ChatFlutter/widgets/chat_image.dart';
-import 'package:ChatFlutter/widgets/full_image_screen.dart';
 import 'package:ChatFlutter/widgets/profile_image.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
-
 import '../constant/style.dart';
 import '../constant/style.dart';
-import '../constant/style.dart';
-import '../constant/style.dart';
-import '../constant/style.dart';
-import '../constant/style.dart';
-import '../constant/style.dart';
+import '../models/choice.dart';
 
 class ChatsScreen extends StatefulWidget {
   static const routeName = 'chat';
@@ -44,7 +38,7 @@ class ChatsScreen extends StatefulWidget {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   String _userId;
-  List<DocumentSnapshot> listMessages = [];
+  List<Message> listMessages = [];
 
   ChatBloc _chatBloc;
 
@@ -65,6 +59,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
     isLoading = false;
     isShowSticker = false;
     imageUrl = '';
+  }
+
+  void _localMessage(
+      {@required dynamic content,
+      @required String timeStamp,
+      @required int type}) {
+    setState(() => listMessages.add(
+          Message(
+            idFrom: _chatBloc.userId,
+            idTo: _chatBloc.contactId,
+            timestamp: timeStamp,
+            content: content,
+            type: type,
+          ),
+        ));
   }
 
   @override
@@ -163,7 +172,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     stream: _chatBloc.chatsStream(snapshot.data),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
-                        listMessages = snapshot.data.documents;
+                        snapshot.data.documents.forEach((element) {
+                          listMessages.removeWhere(
+                              (dt) => dt.timestamp == element['timestamp']);
+                          listMessages.add(Message.fromJson(element.data));
+                        });
                         return ListView.builder(
                             padding: EdgeInsets.all(10.0),
                             itemCount: listMessages.length,
@@ -228,7 +241,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 8.0),
               child: IconButton(
                 icon: const Icon(Icons.send),
-                onPressed: () => _onSendMessage(textEditingController.text, 0),
+                onPressed: () => _onSendMessage(
+                    textEditingController.text, 0, _chatBloc.currentTime),
                 color: magentaColor,
               ),
             ),
@@ -242,11 +256,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Future pickImage() async {
     ImagePicker.pickImage(source: ImageSource.gallery).then((value) {
       if (value != null) {
+        final timeStamp = _chatBloc.currentTime;
         setState(() {
           imageFile = value;
           isLoading = true;
         });
-        uploadFile();
+        uploadFile(timeStamp);
       }
     });
   }
@@ -257,20 +272,22 @@ class _ChatsScreenState extends State<ChatsScreen> {
     setState(() => isShowSticker = !isShowSticker);
   }
 
-  void uploadFile() {
+  void uploadFile(String timeStamp) {
+    _localMessage(content: imageFile, timeStamp: timeStamp, type: 1);
     _chatBloc
-        .uploadImage(file: imageFile)
+        .uploadImage(file: imageFile, timeStamp: timeStamp)
         .then((value) {})
         .catchError((err) => Fluttertoast.showToast(msg: 'Error : $err'))
         .whenComplete(() => setState(() => isLoading = false));
   }
 
-  void _onSendMessage(String content, int type) {
-    // type: 0 = text, 1 = image, 2 = sticker
+  void _onSendMessage(String content, int type, String timeStamp) {
     if (content.trim() != '') {
       textEditingController.clear();
       try {
-        _chatBloc.sendMessage(content: content, type: type);
+        _localMessage(content: content, timeStamp: timeStamp, type: type);
+        _chatBloc.sendMessage(
+            content: content, type: type, timeStamp: timeStamp);
       } catch (err) {
         Fluttertoast.showToast(msg: err.toString());
       }
@@ -281,26 +298,38 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
   }
 
-  Widget _buildItem(int index, DocumentSnapshot document) {
-    if (document['idFrom'] == _userId) {
+  Widget _buildItem(int index, Message document) {
+    if (document.idFrom == _userId) {
       return _buildMyMessage(index, document);
     } else {
       return _buildFriendsMessage(index, document);
     }
   }
 
-  Widget _buildMyMessage(int index, DocumentSnapshot document) {
+  Widget _buildMyMessage(int index, Message document) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         Row(
           children: <Widget>[
-            document['type'] == 0
+            document.type == 0
                 // Text
                 ? Container(
-                    child: Text(
-                      document['content'],
-                      style: TextStyle(color: primaryColor),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text(
+                          document.content,
+                          style: TextStyle(color: primaryColor),
+                        ),
+                        document.isOffline
+                            ? Icon(
+                                Icons.check,
+                                color: magentaColor,
+                                size: 15,
+                              )
+                            : Container()
+                      ],
                     ),
                     padding: EdgeInsets.fromLTRB(15.0, 10.0, 15.0, 10.0),
                     width: 200.0,
@@ -317,7 +346,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 : Container(
                     child: ChatImage(
                       context: context,
-                      imageUrl: document['content'],
+                      imageUrl: document.content,
                     ),
                     margin: EdgeInsets.only(bottom: 10.0, right: 10.0),
                   ),
@@ -328,7 +357,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         isLastMessageRight(index)
             ? Container(
                 child: Text(
-                  TimeFormat.timeStamp(document['timestamp']),
+                  TimeFormat.timeStamp(document.timestamp),
                   style: TextStyle(
                       color: greyColor,
                       fontSize: 12.0,
@@ -341,17 +370,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  Widget _buildFriendsMessage(int index, DocumentSnapshot document) {
+  Widget _buildFriendsMessage(int index, Message document) {
     return Container(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
-              document['type'] == 0
+              document.type == 0
                   ? Container(
                       child: Text(
-                        document['content'],
+                        document.content,
                         style: TextStyle(color: Colors.white),
                       ),
                       padding: EdgeInsets.fromLTRB(15.0, 10.0, 15.0, 10.0),
@@ -368,7 +397,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   : Container(
                       child: ChatImage(
                         context: context,
-                        imageUrl: document['content'],
+                        imageUrl: document.content,
                       ),
                       margin: EdgeInsets.only(
                           bottom: isLastMessageLeft(index) ? 20.0 : 10.0,
@@ -381,7 +410,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           isLastMessageLeft(index)
               ? Container(
                   child: Text(
-                    TimeFormat.timeStamp(document['timestamp']),
+                    TimeFormat.timeStamp(document.timestamp),
                     style: TextStyle(
                         color: greyColor,
                         fontSize: 12.0,
@@ -399,7 +428,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   bool isLastMessageRight(int index) {
     if ((index > 0 &&
             listMessages != null &&
-            listMessages[index - 1]['idFrom'] != _userId) ||
+            listMessages[index - 1].idFrom != _userId) ||
         index == 0) {
       return true;
     } else {
@@ -410,7 +439,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   bool isLastMessageLeft(int index) {
     if ((index > 0 &&
             listMessages != null &&
-            listMessages[index - 1]['idFrom'] == _userId) ||
+            listMessages[index - 1].idFrom == _userId) ||
         index == 0) {
       return true;
     } else {

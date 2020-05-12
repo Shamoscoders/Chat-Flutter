@@ -11,8 +11,8 @@ import '../constant/data.dart';
 class ChatBloc {
   final _firebaseRepository = FirebaseRepository();
 
-  String _contactId;
-  String _userId;
+  String contactId;
+  String userId;
   String groupChatId = '';
 
   StreamController _groupChatController = StreamController<String>.broadcast();
@@ -30,46 +30,50 @@ class ChatBloc {
         .snapshots();
   }
 
+  String get currentTime => DateTime.now().millisecondsSinceEpoch.toString();
+
   ChatBloc({@required String id}) {
-    _contactId = id;
+    contactId = id;
     _fireStoreInit();
   }
 
   void _fireStoreInit() {
     User.getId().then((id) {
-      _userId = id;
-      groupChatId = id.hashCode <= _contactId.hashCode
-          ? '$id-$_contactId'
-          : '$_contactId-$id';
+      userId = id;
+      groupChatId = id.hashCode <= contactId.hashCode
+          ? '$id-$contactId'
+          : '$contactId-$id';
       setGroupChat(groupChatId);
       Firestore.instance
           .collection('users')
           .document(id)
-          .updateData({'chattingWith': _contactId});
+          .updateData({'chattingWith': contactId});
     });
   }
 
   Future<void> sendMessage(
-      {@required String content, @required int type}) async {
+      {@required String content, @required int type, @required timeStamp}) async {
     try {
       _firebaseRepository.sendMessage(
-          userId: _userId,
-          contactId: _contactId,
+          userId: userId,
+          contactId: contactId,
           groupChatId: groupChatId,
           content: content,
+          timeStamp: timeStamp,
           type: type);
     } catch (er) {
       throw er;
     }
   }
 
-  Future<void> uploadImage({@required File file}) async {
+  Future<void> uploadImage({@required File file, @required String timeStamp}) async {
     try {
       _firebaseRepository.uploadImage(
           imageFile: file,
-          userId: _userId,
-          contactId: _contactId,
-          groupChatId: groupChatId);
+          userId: userId,
+          contactId: contactId,
+          groupChatId: groupChatId,
+          timeStamp: timeStamp);
     } catch (er) {
       throw er;
     }

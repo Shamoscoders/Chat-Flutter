@@ -85,6 +85,7 @@ class FirebaseRepository {
       @required String contactId,
       @required String groupChatId,
       @required String content,
+      @required timeStamp,
       @required int type}) async {
     var documentReference = Firestore.instance
         .collection(CHAT_COLLECTIONS)
@@ -99,7 +100,7 @@ class FirebaseRepository {
           {
             'idFrom': userId,
             'idTo': contactId,
-            'timestamp': DateTime.now().millisecondsSinceEpoch.toString(),
+            'timestamp': timeStamp,
             'content': content,
             'type': type
           },
@@ -114,7 +115,8 @@ class FirebaseRepository {
       {@required String userId,
       @required String contactId,
       @required String groupChatId,
-      @required File imageFile}) async {
+      @required File imageFile,
+      @required String timeStamp}) async {
     String fileName = DateTime.now().millisecondsSinceEpoch.toString();
     StorageReference reference = FirebaseStorage.instance.ref().child(fileName);
     StorageUploadTask uploadTask = reference.putFile(imageFile);
@@ -126,6 +128,7 @@ class FirebaseRepository {
           contactId: contactId,
           groupChatId: groupChatId,
           content: fileUrl,
+          timeStamp: timeStamp,
           type: 1);
     } catch (er) {
       throw er;
