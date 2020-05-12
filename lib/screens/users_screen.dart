@@ -246,7 +246,7 @@ class UsersScreenState extends State<UsersScreen> {
                                 height: 50.0,
                                 padding: EdgeInsets.all(15.0),
                               ),
-                              imageUrl: document['photoUrl'],
+                              imageUrl: document['photoUrl'] ?? '',
                               width: 50.0,
                               height: 50.0,
                               fit: BoxFit.cover,

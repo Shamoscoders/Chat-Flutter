@@ -35,9 +35,11 @@ class LoginScreenState extends State<LoginScreen> {
     _setLoading(true);
     _loginBloc.isSignIn().then((value) async {
       final userId = await User.getId();
-      print("UserId : $userId");
-      Navigator.pushNamed(context, UsersScreen.routeName,
-          arguments: UsersScreen.arguments(id: userId));
+      if (userId != null) {
+        print("UserId : $userId");
+        Navigator.pushReplacementNamed(context, UsersScreen.routeName,
+            arguments: UsersScreen.arguments(id: userId));
+      }
     }).whenComplete(() => _setLoading(false));
   }
 
@@ -183,13 +185,13 @@ class LoginScreenState extends State<LoginScreen> {
             Positioned.fill(
               child: Align(
                 alignment: Alignment.center,
-                child: 
-                _isLoading ? CupertinoActivityIndicator()
-                : Text(
-                  'Google',
-                  style: TextStyle(color: greyColor, fontSize: 16.0),
-                  textAlign: TextAlign.center,
-                ),
+                child: _isLoading
+                    ? CupertinoActivityIndicator()
+                    : Text(
+                        'Google',
+                        style: TextStyle(color: greyColor, fontSize: 16.0),
+                        textAlign: TextAlign.center,
+                      ),
               ),
             )
           ],
