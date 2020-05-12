@@ -1,13 +1,16 @@
 
+import 'dart:io';
+
 class Message {
   String idTo;
   String idFrom;
   int type;
   String content;
   String timestamp;
+  File file;
   bool isOffline = true;
 
-  Message({this.idTo, this.idFrom, this.type, this.content, this.timestamp});
+  Message({this.idTo, this.idFrom, this.type, this.content, this.timestamp, this.file});
 
   Message.fromJson(Map<String, dynamic> json) {
     idTo = json['idTo'];

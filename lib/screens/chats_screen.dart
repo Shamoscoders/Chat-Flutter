@@ -62,9 +62,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   void _localMessage(
-      {@required dynamic content,
+      {@required String content,
       @required String timeStamp,
-      @required int type}) {
+      @required int type,
+      File file}) {
     setState(() => listMessages.add(
           Message(
             idFrom: _chatBloc.userId,
@@ -72,6 +73,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             timestamp: timeStamp,
             content: content,
             type: type,
+            file: file,
           ),
         ));
   }
@@ -257,10 +259,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     ImagePicker.pickImage(source: ImageSource.gallery).then((value) {
       if (value != null) {
         final timeStamp = _chatBloc.currentTime;
-        setState(() {
-          imageFile = value;
-          isLoading = true;
-        });
+        setState(() => imageFile = value);
         uploadFile(timeStamp);
       }
     });
@@ -273,12 +272,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   void uploadFile(String timeStamp) {
-    _localMessage(content: imageFile, timeStamp: timeStamp, type: 1);
+    _localMessage(content: '', file: imageFile, timeStamp: timeStamp, type: 1);
     _chatBloc
         .uploadImage(file: imageFile, timeStamp: timeStamp)
         .then((value) {})
-        .catchError((err) => Fluttertoast.showToast(msg: 'Error : $err'))
-        .whenComplete(() => setState(() => isLoading = false));
+        .catchError((err) => Fluttertoast.showToast(msg: 'Error : $err'));
   }
 
   void _onSendMessage(String content, int type, String timeStamp) {
@@ -347,6 +345,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     child: ChatImage(
                       context: context,
                       imageUrl: document.content,
+                      file: document.file,
+                      isOffline: document.isOffline,
                     ),
                     margin: EdgeInsets.only(bottom: 10.0, right: 10.0),
                   ),
@@ -398,6 +398,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       child: ChatImage(
                         context: context,
                         imageUrl: document.content,
+                        isOffline: false,
                       ),
                       margin: EdgeInsets.only(
                           bottom: isLastMessageLeft(index) ? 20.0 : 10.0,

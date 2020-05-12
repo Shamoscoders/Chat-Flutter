@@ -8,27 +8,60 @@ import 'package:flutter/widgets.dart';
 import '../constant/style.dart';
 
 class ChatImage extends StatelessWidget {
-  final dynamic imageUrl;
+  final String imageUrl;
+  final bool isOffline;
+  final File file;
 
-  const ChatImage({Key key, @required this.context, @required this.imageUrl})
+  const ChatImage(
+      {Key key,
+      @required this.context,
+      @required this.imageUrl,
+      @required this.isOffline,
+      this.file})
       : super(key: key);
 
   final BuildContext context;
+  final imageSize = 200.0;
 
   @override
   Widget build(BuildContext context) {
     return FlatButton(
       child: Material(
-        child: dynamic is File
-            ? Image.file(imageUrl,
-                width: 200.0, height: 200.0, fit: BoxFit.cover)
+        child: file != null
+            ? Container(
+                height: imageSize,
+                width: imageSize,
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: Image.file(
+                        file,
+                        width: imageSize,
+                        height: imageSize,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      right: 10,
+                      child: isOffline
+                          ? Icon(
+                              Icons.check,
+                              color: magentaColor,
+                              size: 15,
+                            )
+                          : Container(),
+                    )
+                  ],
+                ),
+              )
             : CachedNetworkImage(
                 placeholder: (context, url) => Container(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(themeColor),
                   ),
-                  width: 200.0,
-                  height: 200.0,
+                  width: imageSize,
+                  height:imageSize,
                   padding: EdgeInsets.all(70.0),
                   decoration: BoxDecoration(
                     color: greyColor2,
@@ -39,9 +72,9 @@ class ChatImage extends StatelessWidget {
                 ),
                 errorWidget: (context, url, error) => Material(
                   child: Image.asset(
-                    'images/img_not_available.jpeg',
-                    width: 200.0,
-                    height: 200.0,
+                    'assets/image_not_found.png',
+                    width: imageSize,
+                    height: imageSize,
                     fit: BoxFit.cover,
                   ),
                   borderRadius: BorderRadius.all(
@@ -50,8 +83,8 @@ class ChatImage extends StatelessWidget {
                   clipBehavior: Clip.hardEdge,
                 ),
                 imageUrl: imageUrl,
-                width: 200.0,
-                height: 200.0,
+                width: imageSize,
+                height: imageSize,
                 fit: BoxFit.cover,
               ),
         borderRadius: BorderRadius.all(Radius.circular(8.0)),
