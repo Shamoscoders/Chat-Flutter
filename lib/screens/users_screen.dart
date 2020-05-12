@@ -2,12 +2,17 @@ import 'package:ChatFlutter/blocs/users_bloc.dart';
 import 'package:ChatFlutter/constant/style.dart';
 import 'package:ChatFlutter/data/user.dart';
 import 'package:ChatFlutter/models/choice.dart';
+import 'package:ChatFlutter/screens/login_screen.dart';
+import 'package:ChatFlutter/utils/dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:progress_dialog/progress_dialog.dart';
 
 import '../constant/style.dart';
+import '../models/choice.dart';
 import 'chats_screen.dart';
 
 class UsersScreen extends StatefulWidget {
@@ -26,6 +31,7 @@ class UsersScreen extends StatefulWidget {
 class UsersScreenState extends State<UsersScreen> {
   bool isLoading = false;
   final String currentUserId;
+  ProgressDialog _progressDialog;
 
   UsersBloc _usersBloc;
 
@@ -35,6 +41,8 @@ class UsersScreenState extends State<UsersScreen> {
   void initState() {
     _usersBloc = UsersBloc();
     super.initState();
+    _progressDialog =
+        DialogUtil.progressDialog(context: context);
   }
 
   @override
@@ -72,7 +80,7 @@ class UsersScreenState extends State<UsersScreen> {
         initialData: '',
         builder: (context, snapshot) {
           return Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.only(left: 20.0, top: 20.0, bottom: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -118,7 +126,7 @@ class UsersScreenState extends State<UsersScreen> {
                             })
                       ],
                     ),
-                    _buildMore()
+                    Align(alignment: Alignment.centerRight, child: _buildMore())
                   ],
                 ),
                 SizedBox(
@@ -139,8 +147,11 @@ class UsersScreenState extends State<UsersScreen> {
 
   Widget _buildMore() {
     return PopupMenuButton<Choice>(
-      icon: Icon(Icons.more_vert, color: Colors.white,),
-      onSelected: (c) {},
+      icon: Icon(
+        Icons.more_vert,
+        color: Colors.white,
+      ),
+      onSelected: (c) => c.id == MenuType.Setting ? null : actionSignOut(),
       itemBuilder: (BuildContext context) {
         return Choice.getMenu().map((Choice choice) {
           return PopupMenuItem<Choice>(
@@ -292,6 +303,17 @@ class UsersScreenState extends State<UsersScreen> {
         ),
       );
     }
+  }
+
+  Future<void> actionSignOut() async {
+    _progressDialog.show();
+    _usersBloc
+        .signOut()
+        .then((value) => Navigator.pushNamedAndRemoveUntil(
+            context, LoginScreen.routeName, (route) => false))
+        .catchError((er) {
+      Fluttertoast.showToast(msg: er.toString());
+    }).whenComplete(() => _progressDialog.hide());
   }
 
   Future<bool> onBackPress() {

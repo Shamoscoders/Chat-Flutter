@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../constant/data.dart';
@@ -14,6 +15,20 @@ class FirebaseRepository {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
   Future<bool> chekGooglogged() async => _googleSignIn.isSignedIn();
+
+  Future<void> signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await _googleSignIn.disconnect();
+      await _googleSignIn.signOut();
+    } on PlatformException catch (err) {
+      print('Error Platform : $err');
+      throw err;
+    } catch (err) {
+      print('Error : $err');
+      throw err;
+    }
+  }
 
   Future<FirebaseUser> firebaseSignIn() async {
     GoogleSignInAccount googleUser = await _googleSignIn.signIn();
@@ -94,7 +109,7 @@ class FirebaseRepository {
     });
   }
 
-  Future<String> uploadImage(
+  Future<void> uploadImage(
       {@required String userId,
       @required String contactId,
       @required String groupChatId,
