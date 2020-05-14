@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:ChatFlutter/blocs/users_bloc.dart';
 import 'package:ChatFlutter/constant/style.dart';
 import 'package:ChatFlutter/data/user.dart';
 import 'package:ChatFlutter/models/choice.dart';
+import 'package:ChatFlutter/models/notif.dart';
 import 'package:ChatFlutter/screens/login_screen.dart';
 import 'package:ChatFlutter/utils/dialog.dart';
 import 'package:ChatFlutter/widgets/profile_image.dart';
@@ -41,8 +44,30 @@ class UsersScreenState extends State<UsersScreen> {
   @override
   void initState() {
     _usersBloc = UsersBloc();
+    _initNotification();
     super.initState();
     _progressDialog = DialogUtil.progressDialog(context: context);
+  }
+
+  void _initNotification() {
+    _usersBloc.registerNotification((notif) {
+      if (notif.trigger == NotifTrigger.forground) {
+        _usersBloc.showNotification(notif.message);
+      } else {
+        _goToChat(name: 'Background', avatar: 'test');
+      }
+    });
+    _usersBloc.configLocalNotification((value) {
+      _goToChat(name: json.encode(value), avatar: 'test');
+    });
+  }
+
+  void _goToChat({String name, String avatar}) {
+    Navigator.popAndPushNamed(
+      context,
+      ChatsScreen.routeName,
+      arguments: ChatsScreen.argument(id: 'dfdf', name: name, avatar: avatar),
+    );
   }
 
   @override
@@ -101,7 +126,7 @@ class UsersScreenState extends State<UsersScreen> {
                             future: User.getNickName(),
                             builder: (context, snapshot) {
                               return Text(
-                                snapshot.data,
+                                snapshot.hasData ? snapshot.data : '',
                                 style: TextStyle(
                                     color: Colors.white, fontSize: 18.0),
                               );
@@ -277,11 +302,15 @@ class UsersScreenState extends State<UsersScreen> {
               )
             ],
           ),
-          onTap: () => Navigator.pushNamed(context, ChatsScreen.routeName,
-              arguments: ChatsScreen.argument(
-                  id: document.documentID,
-                  name: document['nickname'],
-                  avatar: document['photoUrl'])),
+          onTap: () => Navigator.pushNamed(
+            context,
+            ChatsScreen.routeName,
+            arguments: ChatsScreen.argument(
+              id: document.documentID,
+              name: document['nickname'],
+              avatar: document['photoUrl'],
+            ),
+          ),
         ),
       );
     }
