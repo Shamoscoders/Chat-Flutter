@@ -26,7 +26,6 @@ class ChatBloc {
         .document(groubId)
         .collection(groubId)
         .orderBy('timestamp', descending: true)
-        .limit(20)
         .snapshots();
   }
 
