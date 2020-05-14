@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:ChatFlutter/blocs/chat_bloc.dart';
@@ -14,8 +13,6 @@ import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import '../constant/style.dart';
-import '../constant/style.dart';
-import '../models/choice.dart';
 
 class ChatsScreen extends StatefulWidget {
   static const routeName = 'chat';

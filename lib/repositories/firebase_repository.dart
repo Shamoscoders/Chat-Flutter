@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ChatFlutter/data/user.dart';
+import 'package:ChatFlutter/repositories/notification_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -13,6 +14,8 @@ import '../constant/data.dart';
 class FirebaseRepository {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+
+  final NotificationRepository _notificationRepository = NotificationRepository();
 
   Future<bool> chekGooglogged() async => _googleSignIn.isSignedIn();
 
@@ -109,6 +112,7 @@ class FirebaseRepository {
         throw er;
       }
     });
+    _notificationRepository.sendPushNotif(target: contactId, message: type == 0 ? content : 'Chat notification');
   }
 
   Future<void> uploadImage(

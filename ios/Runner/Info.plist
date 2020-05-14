@@ -52,5 +52,12 @@
             </array>
         </dict>
     </array>
+    
+    <key>NSCameraUsageDescription</key>
+    <string>Need camera permission</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Need capture audio </string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Need permission gallery</string>
 </dict>
 </plist>
