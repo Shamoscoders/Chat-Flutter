@@ -271,7 +271,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void uploadFile(String timeStamp) {
     _localMessage(content: '', file: imageFile, timeStamp: timeStamp, type: 1);
     _chatBloc
-        .uploadImage(file: imageFile, timeStamp: timeStamp)
+        .uploadImage(
+            file: imageFile,
+            timeStamp: timeStamp,
+            name: widget.name,
+            avatar: widget.avatar)
         .then((value) {})
         .catchError((err) => Fluttertoast.showToast(msg: 'Error : $err'));
   }
@@ -282,7 +286,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
       try {
         _localMessage(content: content, timeStamp: timeStamp, type: type);
         _chatBloc.sendMessage(
-            content: content, type: type, timeStamp: timeStamp);
+            content: content,
+            type: type,
+            timeStamp: timeStamp,
+            name: widget.name,
+            avatar: widget.avatar);
       } catch (err) {
         Fluttertoast.showToast(msg: err.toString());
       }

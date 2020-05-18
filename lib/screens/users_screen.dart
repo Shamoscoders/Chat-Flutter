@@ -1,19 +1,24 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:ChatFlutter/blocs/users_bloc.dart';
 import 'package:ChatFlutter/constant/style.dart';
 import 'package:ChatFlutter/data/user.dart';
 import 'package:ChatFlutter/models/choice.dart';
 import 'package:ChatFlutter/models/notif.dart';
+import 'package:ChatFlutter/models/payload_notif.dart';
+import 'package:ChatFlutter/repositories/notification_repository.dart';
 import 'package:ChatFlutter/screens/login_screen.dart';
 import 'package:ChatFlutter/utils/dialog.dart';
 import 'package:ChatFlutter/widgets/profile_image.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:progress_dialog/progress_dialog.dart';
+import 'package:provider/provider.dart';
 
 import '../constant/style.dart';
 import '../models/choice.dart';
@@ -38,12 +43,16 @@ class UsersScreenState extends State<UsersScreen> {
   ProgressDialog _progressDialog;
 
   UsersBloc _usersBloc;
+  NotificationRepository _notifRepository;
 
   UsersScreenState({@required this.currentUserId});
 
   @override
   void initState() {
+    _notifRepository =
+        Provider.of<NotificationRepository>(context, listen: false);
     _usersBloc = UsersBloc();
+    _usersBloc.setNotifRepository(_notifRepository);
     _initNotification();
     super.initState();
     _progressDialog = DialogUtil.progressDialog(context: context);
@@ -54,19 +63,52 @@ class UsersScreenState extends State<UsersScreen> {
       if (notif.trigger == NotifTrigger.forground) {
         _usersBloc.showNotification(notif.message);
       } else {
-        _goToChat(name: 'Background', avatar: 'test');
+        print('Print ${json.encode(notif)}');
+        _goToChat(Payload.fromJson(notif.message));
       }
     });
     _usersBloc.configLocalNotification((value) {
-      _goToChat(name: json.encode(value), avatar: 'test');
+      try {
+        print(value);
+        final data = json.decode(value);
+        _goToChat(Payload.fromJson(data));
+      } catch (err) {
+        print('error : $err');
+      }
     });
   }
 
-  void _goToChat({String name, String avatar}) {
+  Future<void> registerNotification() async {
+    final firebaseMessaging = _notifRepository.firebaseMessaging;
+    if (Platform.isIOS) {
+      firebaseMessaging.requestNotificationPermissions(
+        const IosNotificationSettings(
+            sound: true, badge: true, alert: true, provisional: false),
+      );
+    }
+    firebaseMessaging.configure(onMessage: (Map<String, dynamic> message) {
+      print('onConfig: $message');
+      _usersBloc.showNotification(message);
+      return;
+    }, onResume: (Map<String, dynamic> message) {
+      print('onResume: $message');
+      _goToChat(Payload.fromJson(message));
+      return;
+    }, onLaunch: (Map<String, dynamic> message) {
+      print('onLaunch: $message');
+      _goToChat(Payload.fromJson(message));
+      return;
+    });
+  }
+
+  void _goToChat(Payload payload) {
+    final data = payload.data;
+    final body = data.body;
     Navigator.popAndPushNamed(
       context,
       ChatsScreen.routeName,
-      arguments: ChatsScreen.argument(id: 'dfdf', name: name, avatar: avatar),
+      arguments: ChatsScreen.argument(
+          id: body.id, name: body.name, avatar: body.avatar),
     );
   }
 
@@ -114,10 +156,16 @@ class UsersScreenState extends State<UsersScreen> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        ProfileImage(
-                          imageUrl: snapshot.data,
-                          imageSize: 50.0,
-                        ),
+                        snapshot.hasData
+                            ? ProfileImage(
+                                imageUrl: snapshot.data,
+                                imageSize: 50.0,
+                              )
+                            : Icon(
+                                Icons.account_circle,
+                                size: 50.0,
+                                color: greyColor,
+                              ),
                         SizedBox(
                           width: 20,
                         ),
@@ -191,16 +239,14 @@ class UsersScreenState extends State<UsersScreen> {
           child: StreamBuilder<QuerySnapshot>(
             stream: _usersBloc.usersStream,
             builder: (context, snapshot) {
-              print(
-                  "Result : ${snapshot.hasData} - ${snapshot.data.documents.length}");
-              if (!snapshot.hasData) {
-                return _buildLoading();
-              } else {
+              if (snapshot.hasData) {
                 return ListView.builder(
                   itemBuilder: (context, index) =>
                       buildItem(context, snapshot.data.documents[index]),
                   itemCount: snapshot.data.documents.length,
                 );
+              } else {
+                return _buildLoading();
               }
             },
           ),

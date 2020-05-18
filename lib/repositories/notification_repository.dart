@@ -23,10 +23,7 @@ class NotificationRepository {
             sound: true, badge: true, alert: true, provisional: false),
       );
     }
-    User.getId().then((value) {
-      print('id : $value');
-      firebaseMessaging.subscribeToTopic(value);
-    });
+    await subAndUnSubscribeNotif(true);
     firebaseMessaging.configure(onMessage: (Map<String, dynamic> message) {
       print('onConfig: $message');
       result(Notif(NotifTrigger.forground, message));
@@ -42,6 +39,20 @@ class NotificationRepository {
     });
   }
 
+  Future<void> subAndUnSubscribeNotif(bool isSubscribe) async {
+    try {
+      final id = await User.getId();
+      if (id != null && id.isNotEmpty) {
+        isSubscribe
+            ? firebaseMessaging.subscribeToTopic(id)
+            : firebaseMessaging.unsubscribeFromTopic(id);
+      }
+    } catch (err) {
+      print('Error : $err');
+      throw err;
+    }
+  }
+
   Future<void> configLocalNotification(
       Function(String) selectNotification) async {
     var initializationSettingsAndroid =
@@ -53,10 +64,11 @@ class NotificationRepository {
         onSelectNotification: selectNotification);
   }
 
-  Future<void> showNotification(message) async {
+  Future<void> showNotification(
+      {dynamic message, Map<String, dynamic> data}) async {
     var androidPlatformChannelSpecifics = AndroidNotificationDetails(
       'com.bcr.ChatFlutter',
-      'Flutter chat demo',
+      'Flutter chat',
       'your channel description',
       playSound: true,
       enableVibration: true,
@@ -69,13 +81,15 @@ class NotificationRepository {
 
     await flutterLocalNotificationsPlugin.show(0, message['title'].toString(),
         message['body'].toString(), platformChannelSpecifics,
-        payload: json.encode(message));
+        payload: json.encode(data));
   }
 
   Future<void> sendPushNotif(
       {@required String target,
       String title = 'Message',
-      String message = 'notification'}) async {
+      String message = 'notification',
+      String name = 'Unknown',
+      String avatar = ''}) async {
     print('Target : $target');
     try {
       final response = await http.post(
@@ -89,9 +103,18 @@ class NotificationRepository {
             'notification': <String, dynamic>{'body': message, 'title': title},
             'priority': 'high',
             'data': <String, dynamic>{
+              'body': <String, dynamic>{
+                'id': target,
+                'name': name,
+                'avatar': avatar,
+                'status': 'done',
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+              },
+              'id': target,
+              'name': name,
+              'avatar': avatar,
+              'status': 'done',
               'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-              'id': '1',
-              'status': 'done'
             },
             'to': '/topics/$target',
           },
