@@ -15,7 +15,8 @@ class FirebaseRepository {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  final NotificationRepository _notificationRepository = NotificationRepository();
+  final NotificationRepository _notificationRepository =
+      NotificationRepository();
 
   Future<bool> chekGooglogged() async => _googleSignIn.isSignedIn();
 
@@ -83,13 +84,16 @@ class FirebaseRepository {
     });
   }
 
-  Future<void> sendMessage(
-      {@required String userId,
-      @required String contactId,
-      @required String groupChatId,
-      @required String content,
-      @required timeStamp,
-      @required int type}) async {
+  Future<void> sendMessage({
+    @required String userId,
+    @required String contactId,
+    @required String groupChatId,
+    @required String content,
+    @required timeStamp,
+    @required int type,
+    String name,
+    String avatar,
+  }) async {
     var documentReference = Firestore.instance
         .collection(CHAT_COLLECTIONS)
         .document(groupChatId)
@@ -108,19 +112,27 @@ class FirebaseRepository {
             'type': type
           },
         );
+        _notificationRepository.sendPushNotif(
+          target: contactId,
+          message: type == 0 ? content : 'Chat notification',
+          name: name,
+          avatar: avatar,
+        );
       } catch (er) {
         throw er;
       }
     });
-    _notificationRepository.sendPushNotif(target: contactId, message: type == 0 ? content : 'Chat notification');
   }
 
-  Future<void> uploadImage(
-      {@required String userId,
-      @required String contactId,
-      @required String groupChatId,
-      @required File imageFile,
-      @required String timeStamp}) async {
+  Future<void> uploadImage({
+    @required String userId,
+    @required String contactId,
+    @required String groupChatId,
+    @required File imageFile,
+    @required String timeStamp,
+    String name,
+    String avatar,
+  }) async {
     String fileName = DateTime.now().millisecondsSinceEpoch.toString();
     StorageReference reference = FirebaseStorage.instance.ref().child(fileName);
     StorageUploadTask uploadTask = reference.putFile(imageFile);
@@ -133,7 +145,9 @@ class FirebaseRepository {
           groupChatId: groupChatId,
           content: fileUrl,
           timeStamp: timeStamp,
-          type: 1);
+          type: 1,
+          name: name,
+          avatar: avatar);
     } catch (er) {
       throw er;
     }

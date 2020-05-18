@@ -51,7 +51,11 @@ class ChatBloc {
   }
 
   Future<void> sendMessage(
-      {@required String content, @required int type, @required timeStamp}) async {
+      {@required String content,
+      @required int type,
+      @required timeStamp,
+      String name,
+      String avatar}) async {
     try {
       _firebaseRepository.sendMessage(
           userId: userId,
@@ -59,20 +63,28 @@ class ChatBloc {
           groupChatId: groupChatId,
           content: content,
           timeStamp: timeStamp,
-          type: type);
+          type: type,
+          name: name,
+          avatar: avatar);
     } catch (er) {
       throw er;
     }
   }
 
-  Future<void> uploadImage({@required File file, @required String timeStamp}) async {
+  Future<void> uploadImage(
+      {@required File file,
+      @required String timeStamp,
+      String name,
+      String avatar}) async {
     try {
       _firebaseRepository.uploadImage(
           imageFile: file,
           userId: userId,
           contactId: contactId,
           groupChatId: groupChatId,
-          timeStamp: timeStamp);
+          timeStamp: timeStamp,
+          name: name,
+          avatar: avatar);
     } catch (er) {
       throw er;
     }

@@ -2,11 +2,13 @@ import 'dart:ui';
 
 import 'package:ChatFlutter/blocs/login_bloc.dart';
 import 'package:ChatFlutter/data/user.dart';
+import 'package:ChatFlutter/repositories/notification_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
 
 import '../constant/style.dart';
 import '../screens/users_screen.dart';
